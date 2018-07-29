@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -23,6 +24,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,8 @@ public class AcademicTimetable extends AppCompatActivity {
     private EditText addTaskBox;
     private DatabaseReference databaseReference;
     private List<Course> courses;
+    private Button filterButton;
+    private Spinner departmentSpinner, termSpin;
     static String chosenSpecialty, chosenSemester;
     @Override
 
@@ -41,74 +45,41 @@ public class AcademicTimetable extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_academic_timetable);
 
-        Spinner specSpin = findViewById(R.id.spec);
-        final Spinner termSpin = findViewById(R.id.term);
-
+        departmentSpinner = findViewById(R.id.spec);
+        termSpin = findViewById(R.id.term);
+        filterButton = findViewById(R.id.filterButton);
         courses = new ArrayList<Course>();
 
         databaseReference = FirebaseDatabase.getInstance().getReference("Course");//.child("Course");
         recyclerView = (RecyclerView)findViewById(R.id.recycler);
         linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
-
-        //recyclerViewAdapter = new CourseAdapter(AcademicTimetable.this, courses);
-        specSpin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        Query queryAll = FirebaseDatabase.getInstance().getReference().child("Course");
+        displayQuery(queryAll);
+        filterButton.setOnClickListener(new AdapterView.OnClickListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                 chosenSpecialty = parent.getSelectedItem().toString();
-                if (!chosenSpecialty.equals("-Select a Department-"))
-                    Toast.makeText(AcademicTimetable.this, chosenSpecialty, Toast.LENGTH_LONG).show();
-                if (chosenSpecialty.equals("All") || chosenSpecialty.equals("-Select a Department-")) {
+            public void onClick(View v) {
+                chosenSpecialty = String.valueOf(departmentSpinner.getSelectedItem());
+                chosenSemester =  String.valueOf(termSpin.getSelectedItem());
+                if ((chosenSpecialty.equals("All") || chosenSpecialty.equals("-Select a Department-")) && (chosenSemester.equals("All") || chosenSemester.equals("-Select a Term-"))) {
                     Query queryAll = FirebaseDatabase.getInstance().getReference().child("Course");
                     displayQuery(queryAll);
                 }
-                else {
-                    if (!chosenSemester.equals("-Select a Term-") && !chosenSemester.equals("All")) {
-                        Query queryTermSpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty)
-                            .orderByChild("Semester").equalTo(chosenSemester);
-                        displayQuery(queryTermSpec);
-                    }
-                    else{
-                        Query querySpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty);
-                        displayQuery(querySpec);
-                    }
+                else if((chosenSemester.equals("All") ||chosenSemester.equals("-Select a Term-")) && (!(chosenSpecialty.equals("All") ||chosenSpecialty.equals("-Select a Department-")))){
+                    Query querySpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty);
+                    displayQuery(querySpec);
                 }
-            }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                Query queryAll = FirebaseDatabase.getInstance().getReference().child("Course");
-                displayQuery(queryAll);
-            }
-        });
-
-        termSpin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                final String chosenSemester = parent.getSelectedItem().toString();
-                if (!chosenSemester.equals("-Select a Term-"))
-                    Toast.makeText(AcademicTimetable.this, chosenSemester, Toast.LENGTH_LONG).show();
-
-                if (chosenSemester.equals("All") || chosenSemester.equals("-Select a Term-")) {
-                    Query queryAll = FirebaseDatabase.getInstance().getReference().child("Course");
-                    displayQuery(queryAll);
+                else if((!(chosenSemester.equals("All") ||chosenSemester.equals("-Select a Term-"))) && (chosenSpecialty.equals("All") || chosenSpecialty.equals("-Select a Department-"))){
+                    Query querySpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Semester").equalTo(chosenSemester);
+                    displayQuery(querySpec);
                 }
-                else {
-                    if (!chosenSpecialty.equals("-Select a Department-") && !chosenSpecialty.equals("All")) {
-                        Query queryTermSpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty)
-                                .orderByChild("Semester").equalTo(chosenSemester);
-                        displayQuery(queryTermSpec);
-                    }
-                    else{
-                        Query queryTerm = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Semester").equalTo(chosenSemester);
-                        displayQuery(queryTerm);
-                    }
-                }
-            }
+                else{
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                Query queryAll = FirebaseDatabase.getInstance().getReference().child("Course");
-                displayQuery(queryAll);
+                    final Query querySpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("dept_time").equalTo(chosenSpecialty + "_"+chosenSemester);
+
+
+                    displayQuery(querySpec);
+                }
             }
         });
 
@@ -163,4 +134,27 @@ public class AcademicTimetable extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         adapter.startListening();
     }
+
+//    public void filterCourses(View v){
+////        chosenSpecialty = String.valueOf(departmentSpinner.getSelectedItem());
+////        chosenSemester =  String.valueOf(termSpin.getSelectedItem());
+////        if((!chosenSpecialty.equals("All") || !chosenSpecialty.equals("-Select a Department-")) && ((!chosenSemester.equals("-Select a Term-") || !chosenSemester.equals("-Select a Term-")))){
+////            Query queryTermSpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty)
+////                    .orderByChild("Semester").equalTo(chosenSemester);
+////            displayQuery(queryTermSpec);
+////        }
+////        else if((chosenSpecialty.equals("All") || chosenSpecialty.equals("-Select a Department-")) && (!chosenSemester.equals("-Select a Term-") || !chosenSemester.equals("-Select a Term-"))){
+////            Query queryTermSpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Department").equalTo(chosenSpecialty);
+////            displayQuery(queryTermSpec);
+////        }
+////        else if((!chosenSpecialty.equals("All") || !chosenSpecialty.equals("-Select a Department-")) && (chosenSemester.equals("-Select a Term-") || chosenSemester.equals("-Select a Term-"))){
+////            Query queryTermSpec = FirebaseDatabase.getInstance().getReference().child("Course").orderByChild("Semester").equalTo(chosenSemester);
+////            displayQuery(queryTermSpec);
+////        }
+////        else{
+////            Query queryTerm = FirebaseDatabase.getInstance().getReference().child("Course");
+////            displayQuery(queryTerm);
+////        }
+////
+////    }
 }

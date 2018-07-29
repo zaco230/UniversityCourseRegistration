@@ -60,6 +60,15 @@ public class AcademicTimetable_Espresso {
     }
 
     @Test
+    public void FilterGeoDepartment() throws InterruptedException {
+        onView(withId(R.id.spec)).perform(click());
+        onData(allOf(is(instanceOf(String.class)), is("Geology"))).perform(click());
+        onView(withId(R.id.spec)).check(matches(withSpinnerText(containsString("Geology"))));
+
+        onView(withId(R.id.filterButton)).perform(click());
+    }
+
+    @Test
     public void FilterWinterAndEnglish() throws InterruptedException {
         onView(withId(R.id.term)).perform(click());
         onData(allOf(is(instanceOf(String.class)), is("Winter 2019"))).perform(click());
